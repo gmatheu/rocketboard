@@ -18,6 +18,10 @@ define(['flight/lib/component', 'component/mixins/with_auth_token_from_hash', 'c
     return defineComponent(githubIssues, withAuthTokeFromHash, repositoriesURLs);
 
     function githubIssues() {
+      this.defaultAttrs({
+          issues : [] 
+      });
+
       this.createIssue = function (ev, data) {
         var url, repositoryURL;
         repositoryURL = this.getURLFromProject(data.projectName);
@@ -37,6 +41,8 @@ define(['flight/lib/component', 'component/mixins/with_auth_token_from_hash', 'c
             })
           }.bind(this)
         });
+
+      
       };
 
       this.addIssue = function (ev, data) {
@@ -108,14 +114,14 @@ define(['flight/lib/component', 'component/mixins/with_auth_token_from_hash', 'c
               issues: issuesFromProjects
             });
 
+            this.attr.issues = this.attr.issues.concat(issuesFromProjects);
+
             if (data.page == 1) {
               this.trigger('data:issues:clearExportCsvLink');
             }
 
             if (issuesFromProjects.length > 0) {
-              this.trigger('data:issues:mountExportCsvLink', {
-                issues: issuesFromProjects
-              });
+  
               this.trigger('ui:needs:issues', data);
             }
           }.bind(this)
@@ -274,6 +280,12 @@ define(['flight/lib/component', 'component/mixins/with_auth_token_from_hash', 'c
         this.on('data:githubUser:here', this.assignMyselfToIssue);
         this.on('ui:draggable', this.draggable);
         this.on('ui:issue:createIssuesURL', this.changeNewIssueLink);
+
+              this.on('#export_csv', 'click', function(ev,data){
+                this.trigger('data:issues:mountExportCsvLink', {
+                    issues: this.attr.issues
+                });
+              });
       });
     }
   }
