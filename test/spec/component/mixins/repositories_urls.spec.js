@@ -14,7 +14,7 @@ describeMixin('component/mixins/repositories_urls', function () {
   });
 
   describe("repo urls ", function(){
-    it('returns repo url by name', function(){
+    xit('returns repo url by name', function(){
       expect(this.component.getURLFromProject("user-agent")).toEqual(
         "https://api.github.com/repos/pixelated-project/pixelated-user-agent");
       expect(this.component.getURLFromProject("dispatcher")).toEqual(
