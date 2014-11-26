@@ -56,10 +56,9 @@ define(['flight/lib/component'],
                   "\"" + issue.body.replace(/(\r\n|\n|\r)/g, " ") + "\"",
                   "\"" + _.map(issue.labels, function(label) {return label.name;}) +  "\"",
                   issue.created_at,
-                  issue.dev_at,
                   issue.closed_at,
-                  daysBetween(issue.created_at, issue.closed_at),
-                  daysBetween(issue.dev_at, issue.closed_at)].join(';')
+                  daysBetween(issue.created_at, issue.closed_at)
+                  ].join(';')
         });
 
         return issuesCsv;
@@ -80,7 +79,7 @@ define(['flight/lib/component'],
       };
 
       this.csvHeader = function() {
-        return ["Source","Github ID","Title","Status","Kanban State","Description", "Tags", "Create at", "Dev at", "Closed at", "Lead Time", "Cycle Time"].join(';');
+        return ["Source","Github ID","Title","Status","Kanban State","Description", "Tags", "Create at", "Closed at", "Lead Time"].join(';');
       };
 
       this.addDevDateForIssues = function(issues, events) {

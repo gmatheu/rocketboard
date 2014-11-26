@@ -3,7 +3,10 @@ package rocketboard;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
+
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.*;
 import org.openqa.selenium.By;
@@ -14,8 +17,10 @@ import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.support.PageFactory;
+
 import rocketboardPages.RocketboardPage;
 import rocketboard.DriverManager;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -23,7 +28,7 @@ public class RocketboardTests {
 	private static final String String = null;
 	WebDriver driver;
 	public static String baseUrl = "http://localhost:3000/";
-	public static String serviceUrl = "PUT HERE YOUR TOKEN TO GITHUB"; 
+	public static String serviceUrl = "#04bfecc08c62ba6175250190270f3119d2399b01"; // KEY FROM "TESTUSERTWBR", user created to automated tests
 
 	public String repoCreateIssue = "User Agent";
 	public Boolean issueCreated;
@@ -93,7 +98,7 @@ public class RocketboardTests {
 
 	@Test
 	public void E2E() throws Exception {
-		RocketboardPage.selectRepo(repoUsed);
+//		RocketboardPage.selectRepo(repoUsed);
 		checkValue = RocketboardPage.createIssueGettingValue(title, desc, RocketboardPage.chooseProject());
 		assertEquals(String.valueOf(checkValue[0]+1),String.valueOf(checkValue[1]));
 		RocketboardPage.moveIssue(title, "2");
@@ -115,11 +120,11 @@ public class RocketboardTests {
 		assertThat(valueAfter, equalTo(valueBefore+1));
 	}
 
-	//@Test - Test with error: String index out of range -2
+	//@Test // - Test with error: String index out of range -2
 	public void moveCheckingValues() throws Exception {
-		String[] position = new String[2];
-		position[0]="all";
-		RocketboardPage.selectRepo(position);
+//		String[] position = new String[2];
+//		position[0]="all";
+//		RocketboardPage.selectRepo(position);
 		assertThat(RocketboardPage.createIssueCheckingValue(title, desc, RocketboardPage.chooseProject()), equalTo(Boolean.TRUE));
 		checkValue = RocketboardPage.moveIssueGettingValue(title, "2");
 		assertEquals(String.valueOf(checkValue[0]+1),String.valueOf(checkValue[1]));
@@ -128,6 +133,7 @@ public class RocketboardTests {
 		checkValue = RocketboardPage.moveIssueGettingValue(title, "4");
 		assertEquals(String.valueOf(checkValue[0]+1),String.valueOf(checkValue[1]));
 		checkValue = RocketboardPage.moveIssueGettingValue(title, "5");
+		Thread.sleep(4000);
 		assertEquals(String.valueOf(checkValue[0]+1),String.valueOf(checkValue[1]));
 	}
 
@@ -219,13 +225,23 @@ public class RocketboardTests {
 
 	}
 
-
 	@Test
 	public void AssignMeCard() throws Exception{
 		RocketboardPage.createIssue(title, desc, RocketboardPage.chooseProject());
 		String idCard = RocketboardPage.getInfo(title, "id");
 		RocketboardPage.assignMe(idCard);
 		assertEquals((driver.findElement(By.xpath("//*[@id='"+idCard+"']/div[1]/a[1]/img")).isDisplayed()), Boolean.TRUE);
-	}	
+	}
+	
+	@Test
+	public void setLabel() throws Exception {
+		RocketboardPage.createIssueGettingValue(title, desc, repoCreateIssue);
+		String href = RocketboardPage.getInfo(title, "href");
+		String id = RocketboardPage.getInfo(title, "id");
+		RocketboardPage.restRequest(href, "[\"bug\"]");
+		RocketboardPage.visible(id);
+		String label = driver.findElement(By.xpath("//*[@id='"+id+"']/div[3]/span")).getText();
+		assertEquals(label.equals("bug"), Boolean.TRUE);
+	}
 
 }

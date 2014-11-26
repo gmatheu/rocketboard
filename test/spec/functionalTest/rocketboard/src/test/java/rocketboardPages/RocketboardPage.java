@@ -3,6 +3,11 @@ package rocketboardPages;
 import static org.junit.Assert.fail;
 
 
+
+
+
+
+
 //import java.awt.List;
 import java.util.List;
 import java.util.ArrayList;
@@ -22,7 +27,13 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
 
 import rocketboard.RocketboardTests;
 
@@ -82,7 +93,7 @@ public class RocketboardPage {
 
 	@FindBy(className="link")
 	WebElement options;
-	
+
 
 	public RocketboardPage(WebDriver driver) {
 		super();
@@ -233,6 +244,11 @@ public class RocketboardPage {
 		waitingLoading();
 		values[0] = getCount("backlog");
 		createIssue(title, desc, repoName);
+//		String id = getInfo(title, "id");
+//		visible(id);
+		WebDriverWait wait = new WebDriverWait(driver, 10);
+		Boolean element = wait.until(
+		        ExpectedConditions.textToBePresentInElement(By.cssSelector("div[id$='backlog']"), title));
 		values[1] = getCount("backlog");
 		return values;
 	}
@@ -272,13 +288,9 @@ public class RocketboardPage {
 	}
 
 	public void waitMessage(String message) throws Exception {
-		waitingLoading();
-		System.out.println(message);
-		int timeout=0;
-		while(timeout<=10 || !message.equals(driver.findElement(By.cssSelector("div[class~='done']")).getText())){
-			System.out.println(driver.findElement(By.cssSelector("div[class~='done']")).getText());
-			timeout++;
-		}
+		WebDriverWait wait = new WebDriverWait(driver, 10);
+		Boolean element = wait.until(
+		        ExpectedConditions.textToBePresentInElement(By.cssSelector("div[class~='done']"), message));
 	}
 
 	public String columnName (String column) {
@@ -394,13 +406,12 @@ public class RocketboardPage {
 		}
 	}
 
-	
+
 	public String getInfo(String nameIssue, String info) throws Exception {		
-		Thread.sleep(6000);
 		/** Create array with WebElement options*/
 		List<WebElement> l = driver.findElements(By.xpath("//div[contains(@class, 'issue list-group-item')]"));
 		List<WebElement> name = driver.findElements(By.xpath("//*[@class='title list-group-item-heading']"));
-		
+
 
 		/** Create array with WebElement options - ID */
 		ArrayList<String> actual_role = new ArrayList<String>( );
@@ -441,13 +452,66 @@ public class RocketboardPage {
 
 		return getInfo.toString();
 	}
-	
+
 	public void assignMe(String id) throws Exception {
 		WebElement assign = driver.findElement(By.xpath("//*[@id='"+id+"']/div[1]/a[1]/span[2]"));
-		assign.click();	
-		Thread.sleep(6000);
-		
-		}
-
+		assign.click();
+		WebDriverWait wait = new WebDriverWait(driver, 10);
+		WebElement element = wait.until(
+		        ExpectedConditions.visibilityOfElementLocated(By.xpath("//*[@id='"+id+"']/div[1]/a[1]/img")));
 	}
+
+	public void pageRefresh() throws Exception {
+		driver.navigate().refresh();
+	}
+
+	public void restRequest(String urlGit, String labelGit) throws Exception {	
+		// SETUP STRINGS
+		String urlString = "https://api.github.com/repos/"+urlGit+"/labels?access_token="+RocketboardTests.serviceUrl.substring(1);
+		String infWebSvcRequestMessage = labelGit;
+
+		// CREATE HTTP REQUEST CONTENT
+		URL urlForInfWebSvc = new URL(urlString);
+		URLConnection UrlConnInfWebSvc = urlForInfWebSvc.openConnection();
+		HttpURLConnection httpUrlConnInfWebSvc = (HttpURLConnection) UrlConnInfWebSvc;
+		httpUrlConnInfWebSvc.setDoOutput(true);
+		httpUrlConnInfWebSvc.setDoInput(true);
+		httpUrlConnInfWebSvc.setAllowUserInteraction(true);
+		httpUrlConnInfWebSvc.setRequestMethod("POST");
+		OutputStreamWriter infWebSvcReqWriter = new OutputStreamWriter(httpUrlConnInfWebSvc.getOutputStream());
+		infWebSvcReqWriter.write(infWebSvcRequestMessage);
+		infWebSvcReqWriter.flush();
+		infWebSvcReqWriter.close();
+
+		// get a response - maybe "success" or "true", XML or JSON etc.
+		InputStream inputStream = httpUrlConnInfWebSvc.getInputStream();
+		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+		String line;
+		StringBuffer response = new StringBuffer();
+		while ((line = bufferedReader.readLine()) != null) {
+			response.append(line);
+			response.append('\r');
+		}
+		bufferedReader.close();
+	}
+
+	public boolean visible(String id) throws Exception {
+		int i = 0;
+		boolean present = false;
+		while(i<=60 && present == false){
+			pageRefresh();
+			waitingLoading();
+			try {
+				driver.findElement(By.xpath("//*[@id='"+id+"']/div[1]"));
+	            present = true;
+	        } catch (org.openqa.selenium.NoSuchElementException e) {
+	        	present = false;
+	        }
+			System.out.print(present);
+			i++;
+		}
+		return present;
+	}
+
+}
 
