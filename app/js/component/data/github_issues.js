@@ -13,14 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-define(['flight/lib/component', 'component/mixins/with_auth_token_from_hash', 'component/mixins/repositories_urls'],
-  function (defineComponent, withAuthTokeFromHash, repositoriesURLs) {
-    return defineComponent(githubIssues, withAuthTokeFromHash, repositoriesURLs);
+define([
+  'flight/lib/component',
+  'component/mixins/with_auth_token_from_hash',
+  'component/mixins/repositories_urls',
+  'component/templates/popover_template'
+  ], function (defineComponent, withAuthTokeFromHash, repositoriesURLs, withPopoverTemplate) {
+    return defineComponent(githubIssues, withAuthTokeFromHash, repositoriesURLs, withPopoverTemplate);
 
     function githubIssues() {
+
       this.defaultAttrs({
           issues : [] 
       });
+
 
       this.createIssue = function (ev, data) {
         var url, repositoryURL;
@@ -130,7 +136,82 @@ define(['flight/lib/component', 'component/mixins/with_auth_token_from_hash', 'c
       };
 
       this.assignMyselfToIssue = function (ev, assignData) {
+
         var user, issue, url;
+        if (assignData != undefined) {
+          user = assignData.user;
+          issue = assignData.issue;
+        }
+
+        if (!issue) {
+          return;
+        }
+
+        if (!user) {
+          this.trigger(document, 'ui:needs:githubUser', assignData);
+          return;
+        }
+
+        if (!$('#' + issue.id + ' .empty-avatar').is(':visible')) {
+          var userLogin = $('#'+ issue.id + ' .assignee-avatar').attr('title');
+          if (userLogin == user.login) {
+            this.trigger(document, 'ui:unassign:user', assignData);
+          }
+          else {
+            var issue_header = $('#' + issue.id + ' .issue-header');
+            if (issue_header.children('.popover').length) {
+              issue_header.children('.popover').remove();
+            }
+            else {
+              var that = this,
+                  popover_confirm = $('<div class="popover-confirm"></div>'),
+                  popover_confirm_yes = $('<button type="button" class="btn btn-danger">yes</button>'),
+                  popover_confirm_no = $('<button type="button" class="btn btn-default">no</button>'),
+                  pop = $(this.popover({
+                    title: "Unassign "+ userLogin +"?", body: ''
+                  })).appendTo(issue_header);
+
+              popover_confirm_yes.bind('click', function(){
+                that.trigger(document, 'ui:unassign:user', assignData);
+                pop.remove();
+              }).appendTo(popover_confirm);
+              popover_confirm_no.bind('click', function(){
+                pop.remove();
+              }).appendTo(popover_confirm);
+
+              popover_confirm.appendTo(pop.children('.popover-body'));
+            }
+          }
+          return;
+        }
+
+        url = issue.url + "?access_token=" + this.getCurrentAuthToken();
+
+        $('#' + issue.id + ' .empty-avatar').toggleClass('loading');
+        $('#' + issue.id + ' .empty-avatar-label').hide();
+
+        $.ajax({
+          type: 'PATCH',
+          url: url,
+          data: JSON.stringify({
+            assignee: user.login
+          }),
+          success: function (response, status, xhr) {
+            $('#' + issue.id + ' .assignee-avatar').attr('src', user.avatar_url);
+            $('#' + issue.id + ' .assignee-avatar').attr('title', user.login);
+            $('#' + issue.id + ' .assignee-avatar').show();
+            $('#' + issue.id + ' .empty-avatar').toggleClass('loading').hide();
+            $('#' + issue.id + ' .empty-label').hide();
+          },
+          error: function() {
+            $('#' + issue.id + ' .empty-avatar').toggleClass('loading').hide();
+            $('#' + issue.id + ' .empty-avatar-label').show();
+          }
+        });
+      };
+
+      this.unassignMyselfToIssue = function(ev, assignData) {
+        var user, issue, url, currentData;
         if (assignData != undefined) {
           user = assignData.user;
           issue = assignData.issue;
@@ -147,26 +228,39 @@ define(['flight/lib/component', 'component/mixins/with_auth_token_from_hash', 'c
 
         url = issue.url + "?access_token=" + this.getCurrentAuthToken();
 
+        currentData = {
+          src: $('#' + issue.id + ' .assignee-avatar').attr('src'),
+          title: $('#' + issue.id + ' .assignee-avatar').attr('title')
+        };
+
+        $('#' + issue.id + ' .assignee-avatar').attr('src', '/img/ajax-loader.gif');
+        $('#' + issue.id + ' .assignee-avatar').attr('title', 'loading...');
+
         $.ajax({
           type: 'PATCH',
           url: url,
           data: JSON.stringify({
-            assignee: user.login
+            assignee: ''
           }),
           success: function (response, status, xhr) {
-            $('#' + issue.id + ' .assignee-avatar').attr('src', user.avatar_url);
-            $('#' + issue.id + ' .assignee-avatar').attr('title', user.login);
-            $('#' + issue.id + ' .empty-avatar').hide();
-            $('#' + issue.id + ' .empty-avatar-label').hide();
-            $('#' + issue.id + ' .empty-label').hide();
+            $('#' + issue.id + ' .assignee-avatar').attr('src', '').hide();
+            $('#' + issue.id + ' .assignee-avatar').attr('title', '').hide();
+            $('#' + issue.id + ' .empty-avatar').show();
+            $('#' + issue.id + ' .empty-avatar-label').show();
+            $('#' + issue.id + ' .empty-label').show();
+          },
+          error: function() {
+            $('#' + issue.id + ' .assignee-avatar').attr('src', currentData.src);
+            $('#' + issue.id + ' .assignee-avatar').attr('title', currentData.title);
           }
         });
-      };
+      }
 
       this.draggable = function (ev, data) {
         $('.backlog, .ready, .development, .quality-assurance, .done').sortable({
           items: '.issue',
           connectWith: '.list-group',
+          cancel: '.popover',
           receive: function (event, ui) {
             var label, url;
 
@@ -282,11 +376,15 @@ define(['flight/lib/component', 'component/mixins/with_auth_token_from_hash', 'c
         this.on('ui:draggable', this.draggable);
         this.on('ui:issue:createIssuesURL', this.changeNewIssueLink);
 
+
               this.on('#export_csv', 'click', function(ev,data){
                 this.trigger('data:issues:mountExportCsvLink', {
                     issues: this.attr.issues
                 });
               });
+
+        this.on('ui:unassign:user', this.unassignMyselfToIssue);
+
       });
     }
   }
