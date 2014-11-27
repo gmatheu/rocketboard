@@ -70,7 +70,8 @@ define(['flight/lib/component', 'component/mixins/with_auth_token_from_hash', 'c
           var issuesArrayJson = project.repo[0].responseJSON || [];
           _.each(issuesArrayJson, function(issue,index) {
               issue.projectName = project.projectName;
-               allIssues.push(issue);
+              issue.repoUrl = issue.url.match(/https:\/\/([a-zA-Z._]+\/){4}/)[0];
+              allIssues.push(issue);
           });
         });
         return allIssues;
